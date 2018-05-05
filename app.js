@@ -2,13 +2,12 @@ const http = require('http');
 const express = require('express');
 const bodyParser = require("body-parser");
 const parseurl = require('parseurl');
-const path = require('path');
 const firebase = require('firebase');
 const app = express();
 const hostname = '127.0.0.1';
 const port = 4000;
 const config = require('./configDB.js');
-
+const uniqid = require('uniqid');
 
 app.use(function(req, res, next) {
 
@@ -19,16 +18,25 @@ app.use(function(req, res, next) {
   });
 
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser({limit: '50mb'}));
 app.use(bodyParser.json());
 
 app.get('/', function(req, res) {
 
-  res.statusCode = 200;
-  res.json({"prueba":0});
+  
+  var ref = firebase.database().ref("activities");
+  
+  ref.on("value", function(snapshot) {
+     //console.log(snapshot.val());
+     res.json(snapshot.val());
+  }, function (error) {
+     console.log("Error: " + error.code);
+  });
+  /*res.json({"prueba":0});
 
   console.log(req.params);
   console.log(req.query);
-  console.log(req.body);
+  console.log(req.body);*/
   
 
 
@@ -53,9 +61,13 @@ app.post('/cargarActividad', function(req, res) {
 
   res.statusCode = 200;
   res.json({"prueba":0});
+  var obj = {}
+  obj = req.body;
 
-  console.log(req.body);
-  insertarActividad('company_1', 0, req.body);
+  obj.activityID = uniqid();
+  
+  insertarActividad(obj.activityID, obj);
+  
   
 
 });
@@ -75,7 +87,21 @@ app.post('/registroEmpresa', function(req, res) {
 });
 
 
+//ENDPOINT PARA LEER TODAS LAS ACTIVIDADES
 
+app.get('/getAllActivities', function(req, res) {
+
+  
+  var ref = firebase.database().ref("activities");
+  
+  ref.on("value", function(snapshot) {
+     res.json(snapshot.val());
+  }, function (error) {
+     console.log("Error: " + error.code);
+  });
+
+
+});
 
 
 app.listen(port, hostname, () => {
@@ -90,10 +116,14 @@ firebase.initializeApp(config);
 
 var database = firebase.database();
 
-function insertarActividad(companyID, activityID, activity) {
-  firebase.database().ref('activities/'+ companyID +'/'+ activityID).set(activity);
+function insertarActividad(activityID, activity) {
+  firebase.database().ref('activities/'+activityID).set(activity);
 }
 
 function insertarEmpresa(companyID, company) {
   firebase.database().ref('companies/'+ companyID).set(company);
 }
+
+
+
+
