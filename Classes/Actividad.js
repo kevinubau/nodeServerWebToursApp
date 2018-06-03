@@ -16,7 +16,10 @@ function Actividad(
     descripcion,
     recomendaciones,
     longitude,
-    latitude
+    latitude,
+    activityID,
+    email
+
 ) {
 
     this.fechaInicio=fechaInicio;
@@ -36,6 +39,8 @@ function Actividad(
     this.recomendaciones=recomendaciones;
     this.longitude=longitude;
     this.latitude=latitude;
+    this.activityID=activityID;
+    this.email=email;
   
   }
 

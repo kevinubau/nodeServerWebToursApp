@@ -11,6 +11,7 @@ const uniqid = require('uniqid');
 const fs = require('fs'); 
 const geodist = require('geodist');
 
+//CLASSES
 var Actividad = require('./Classes/Actividad.js');
 var Administrador = require('./Classes/Administrador.js');
 var Empresa = require('./Classes/Empresa.js');
@@ -25,11 +26,14 @@ app.use(function(req, res, next) {
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
     next();
   
-  });
+});
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser({limit: '50mb'}));
 app.use(bodyParser.json());
+
+
+
 
 app.get('/', function(req, res) {
 
@@ -86,6 +90,9 @@ app.get('/', function(req, res) {
 
 });
 
+
+
+
 app.post('/', function(req, res) {
   console.log("POST REQUEST");
 
@@ -98,88 +105,141 @@ app.post('/', function(req, res) {
 });
 
 
+
+
+
 //ENDPOINT PARA REGISTRO DE ACTIVIDADES
 
 app.post('/cargarActividad', function(req, res) {
-  console.log("POST REQUEST");
-
-  res.statusCode = 200;
-  res.json({"prueba":0});
-  var obj = {}
-  obj = req.body;
-
-  obj.activityID = uniqid();
+  console.log(req.body);
   
-  insertarActividad(obj.activityID, obj);
-  
+ 
+  var nuevaActividad =  new Actividad(
+
+     
+    req.body.fechaInicio,
+    req.body.fechaFin,
+    req.body.lugarDestino,
+    req.body.lugarSalida,
+    req.body.precio,
+    req.body.cupo,
+    req.body.images,
+    req.body.titulo,
+    req.body.horaInicio,
+    req.body.horaFin,
+    [], 
+    req.body.categoria,
+    req.body.dificultad,
+    req.body.descripcion,
+    req.body.recomendaciones,    
+    "",
+    "",
+    uniqid(),
+    req.body.email
+
+    /* 
+    fechaInicio,
+    fechaFin,
+    lugarDestino,
+    LugarSalida,
+    precio,
+    cupo,
+    imagenes,
+    titulo,
+    horaInicio,
+    horaFin,
+    integrantes,
+    categoria,
+    dificultad,
+    descripcion,
+    recomendaciones,
+    longitude,
+    latitude
+    activityID,
+    email
+    */
+
+  );
+
+
+  insertarActividad(nuevaActividad.activityID, nuevaActividad);
+  res.json({"responseMessage":"registro exitoso"});
   
 
 });
+
+
 
 //ENDPOINT PARA REGISTRO DE EMPRESA
-
-app.post('/registroEmpresaOld', function(req, res) {
-  console.log("POST REQUEST");
-
-  res.statusCode = 200;
-  res.json({"prueba":0});
-
-  console.log(req.body);
-  insertarEmpresa(req.body.cedula, req.body);
-  
-
-});
-
 app.post('/registroEmpresa', function(req, res) {
-  console.log("POST REQUEST");
+  
+  var nuevaEmpresa =  new Empresa(
 
-  res.statusCode = 200;
-  res.json({"prueba":0});
+    req.body.nombreEmpresa, 
+    req.body.cedula, 
+    req.body.email, 
+    req.body.telefono, 
+    req.body.direccion, 
+    ""
 
-  console.log(req.body);
-  //insertarEmpresa(req.body.cedula, req.body);
+  );
   /*
-  nombreComercial,
-    cedulaJuridica,
-    email,
-    telefonos,
-    direccionExacta,
-    descripcion
+    ATRIBUTOS DE CLASE EMPRESA.
+      nombreComercial,
+      cedulaJuridica,
+      email,
+      telefonos,
+      direccionExacta,
+      descripcion
   */
-  var nuevaEmpresa =  new Empresa(req.body.nombreEmpresa, req.body.cedula, req.body.email, req.body.telefono, req.body.direccion, "");
-  //signUp(nuevaEmpresa.email, req.body.pass);
-  //insertarEmpresa(req.body.cedula, nuevaEmpresa);
-  firebase.auth().createUserWithEmailAndPassword(nuevaEmpresa.email, req.body.pass).catch(function(error) {
+  //console.log("CEDULA: "+req.body);
+  firebase.database().ref('companies/'+nuevaEmpresa.cedulaJuridica).once('value', function(snapshot) {
+
+    var exists = (snapshot.val() !== null);
+    //console.log(snapshot.val());
     
-    if (error) {
-      console.log('Authentication error: ', error);
-     
-      res.json({"error": error.code});
+
+    if(!CallbackEmpresaExiste(req.body.cedula, exists)){
+
+      //console.log("nuevo");
+
+      firebase.auth().createUserWithEmailAndPassword(nuevaEmpresa.email, req.body.pass).then(function() {
+        //console.log("Exitoso!");
+        //console.log(nuevaEmpresa);
+        insertarEmpresa(nuevaEmpresa.cedulaJuridica, nuevaEmpresa);
+        res.send({responseMessage: "Registro exitoso. Ya puedes iniciar sesión!"});
+        
+    
+      }).catch(function(error) {
+    
+        // An error happened.
+        //console.log("bad !");
+        var errorCode = error.code;
+        //console.log(error);
+        res.send({responseMessage: "Correo ya está registrado!"});
+        
+        
+    
+    
+      });
+
     }
-    
-    
-    
+
+    else{
+      res.send({responseMessage: "Cédula jurídica ya está registrada!"});
+      //console.log("Cédula jurídica ya está registrada!!");
+    }
+
   });
 
-  firebase.auth().onAuthStateChanged(function(user) {
-    if (user) {
-      // User is signed in.
-      console.log("logged user = "+JSON.stringify(user));
-      insertarEmpresa(req.body.cedula, nuevaEmpresa);
-      res.json({"usuario": user.email});
-
-    } else {
-      // No user is signed in.
-      console.log("error x ");
-    }
-
-
-  });
 
 
 
 
 });
+
+
+
 
 
 //ENDPOINT PARA LOGIN DE EMPRESAS
@@ -224,14 +284,15 @@ app.post('/login', function(req, res) {
 
 
   
-  //signIn(req.body.email, req.body.password);
-  
-  
 
 });
 
 
-//ENDPOIINT PARA FORGOT PASSOWORD
+
+
+
+
+//ENDPOINT PARA FORGOT PASSOWORD
 
 app.post('/forgotPassword', function(req, res) {
   console.log(req.body);
@@ -259,19 +320,24 @@ app.post('/forgotPassword', function(req, res) {
   });
 
 
-  
- 
-
-
-
-
 
 
 });
-//firebase.auth().sendPasswordResetEmail('user@example.com')
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //ENDPOINT PARA LEER TODAS LAS ACTIVIDADES
-
 app.get('/getAllActivities', function(req, res) {
 
   
@@ -287,27 +353,7 @@ app.get('/getAllActivities', function(req, res) {
 });
 
 
-app.get('/sigInPrueba', function(req, res) {
 
-  signUp("ubau1132456788@gmail.com", "holamundO");
-  
-  firebase.auth().createUserWithEmailAndPassword("ubauuu1132456788@gmail.com", "holamundO").catch(function(error) {
-    
-    var errorCode = error.code;
-    console.log("error code: "+errorCode);
-    var errorMessage = error.message;
-    console.log("error message: "+errorMessage);
-    
-    
-    
-  });
-  
-  
-  
-  res.statusCode = 200;
-  res.json({"prueba":0});
-
-});
 
 
 app.listen(port, hostname, () => {
@@ -317,67 +363,11 @@ app.listen(port, hostname, () => {
 
 
 
-
+//FUNCIONES DB
 firebase.initializeApp(config);
-
-function signUp(email, password){
-  
-
-  
-  firebase.auth().createUserWithEmailAndPassword(email, password).catch(function(error) {
-    
-    var errorCode = error.code;
-    console.log("error code: "+errorCode);
-    var errorMessage = error.message;
-    console.log("error message: "+errorMessage);
-    
-    
-    
-  });
-
-  firebase.auth().onAuthStateChanged(function(user) {
-    if (user) {
-      // User is signed in.
-      console.log("logged user = "+JSON.stringify(user))
-    } else {
-      // No user is signed in.
-      console.log("error ");
-    }
-  });
-  
-  
-  
-}
-
-
-function signIn(email, password){
-  
-  firebase.auth().signInWithEmailAndPassword(email, password).catch(function(error) {
-
-
-    if (error) {
-      console.log('Authentication error: ', error);
-    }
-
-
-  });
-
-
-  firebase.auth().onAuthStateChanged(function(user) {
-    if (user) {
-      // User is signed in.
-      console.log("logged user = "+JSON.stringify(user));
-      return user;
-    } else {
-      // No user is signed in.
-      console.log("error x ");
-    }
-    
-  });
-
-}
-
 var database = firebase.database();
+
+
 
 function insertarActividad(activityID, activity) {
   firebase.database().ref('activities/'+activityID).set(activity);
@@ -387,20 +377,15 @@ function insertarEmpresa(companyID, company) {
   firebase.database().ref('companies/'+ companyID).set(company);
 }
 
-/*
-var a =  new Administrador([]);
-a.insert(4);
-a.insert(4);
-a.insert(4);
-console.log(a.get());
 
-for (let index = 0; index < a.lista.length; index++) {
-  console.log(a.lista[index]);
-  
+
+
+function CallbackEmpresaExiste(userId, exists) {
+  if (exists) {
+    console.log('user ' + userId + ' exists!');
+  } else {
+    console.log('user ' + userId + ' does not exist!');
+  }
+  return exists;
 }
-
-console.log(a);*/
-
-
-
 
